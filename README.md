@@ -17,6 +17,8 @@
 
 [![become_a_patron_button](https://user-images.githubusercontent.com/15714929/40394531-2130b9ce-5e24-11e8-91a2-bbf8e6e75d21.png)][Patreon]
 
+The Patreon/support links in this repository belong to the original RPFM author. This macOS fork exists because of that upstream work, so if you love RPFM please support the original project and its maintainers.
+
 ## macOS fork notes
 
 This fork adds experimental macOS build support for RPFM. Use it when you want to open, inspect or edit Total War `.pack` files on macOS.
