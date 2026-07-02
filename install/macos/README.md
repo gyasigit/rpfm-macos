@@ -1,28 +1,58 @@
 # macOS Build Notes
 
-There is no automated macOS build or packaging script yet. This document describes what would be needed to build RPFM on macOS.
+macOS support is experimental. The repository now includes a helper script that builds RPFM and lays it out in a minimal `.app` bundle, but it still needs broader local testing and notarization before it can be considered a maintained release path.
 
 ## Prerequisites
 
-- Rust toolchain (stable, >= 1.81)
-- Qt 6 and KDE Frameworks 6 (via Homebrew: `brew install qt@6 kf6-kcompletion kf6-kiconthemes kf6-ktexteditor kf6-kxmlgui kf6-kwidgetsaddons`)
-- CMake (`brew install cmake`)
-- GNU Make (`brew install make`, provides `gmake`)
+- Rust toolchain (stable, >= 1.85)
+- Qt 6
+- CMake
+- pkg-config
+- GNU Make (`gmake`)
+
+With Homebrew:
+
+```bash
+brew install rust cmake pkg-config make qt@6
+```
+
+If `qt@6` is not linked into your default PATH, the build script and `rpfm_ui/build.rs` check the common Homebrew prefixes automatically. You can also set `QMAKE6` or `QMAKE` explicitly.
+
+By default the script sets `RPFM_NO_KDE=1`. This uses Qt-only compatibility shims for KLineEdit, KMessageWidget, KTextEditor, KShortcutsDialog and related widgets, because readily available Homebrew taps do not currently provide the KF6 stack in the same way RPFM expects on Linux/Windows.
 
 ## Building
 
 From the repository root:
 
 ```bash
+./install/macos/build_macos.sh
+```
+
+The script runs `cargo build --release --bin rpfm_server --bin rpfm_ui`, compiles the custom Qt extensions library through `rpfm_ui/build.rs`, and creates:
+
+```text
+target/macos/RPFM.app
+```
+
+You can still build manually:
+
+```bash
+RPFM_NO_KDE=1 \
+QMAKE6=/opt/homebrew/opt/qt@6/bin/qmake6 \
+GMAKE=/opt/homebrew/opt/make/libexec/gnubin/make \
 cargo build --release --bin rpfm_server --bin rpfm_ui
 ```
 
-The custom Qt extensions library (`3rdparty/src/qt_rpfm_extensions`) is compiled automatically by `rpfm_ui/build.rs` using `gmake` on macOS.
+Set `RPFM_NO_KDE=0` only if you have a local KDE Frameworks 6 setup with the required headers, libraries and designer plugins.
+
+## Total War Game Detection
+
+RPFM has a macOS Steam install type for Total War: WARHAMMER III. It detects the Feral macOS layout by the `Total War WARHAMMER III.app` bundle and uses `TotalWarhammer3Data/data` for PackFiles and `TotalWarhammer3Data/data/localisation` for language files.
 
 ## Packaging Considerations
 
-- macOS applications are typically distributed as `.app` bundles inside `.dmg` disk images
-- An `.app` bundle requires a specific directory structure (`Contents/MacOS/`, `Contents/Resources/`, `Contents/Frameworks/`, `Info.plist`)
-- Qt dependencies would need to be bundled using `macdeployqt6`
-- Code signing and notarization are required for distribution outside the App Store
+- macOS applications are typically distributed as `.app` bundles inside `.dmg` disk images.
+- Qt dependencies should be bundled using `macdeployqt6` or `macdeployqt`; the script calls either tool when available.
+- The Qt-only build disables KDE's shortcut editor and uses `QPlainTextEdit` instead of KTextEditor, so syntax highlighting/editor preferences are reduced compared with Linux/Windows.
+- Code signing and notarization are required for distribution outside the App Store.
 - No CI runner is currently configured for macOS builds

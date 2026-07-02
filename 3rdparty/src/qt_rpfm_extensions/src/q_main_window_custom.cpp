@@ -1,19 +1,24 @@
-#include "kicontheme.h"
-#include <breezeicons.h>
-
 #include "q_main_window_custom.h"
 #include <QApplication>
 #include <QDebug>
+#include <QFileOpenEvent>
 #include <QFileInfo>
 #include <QIcon>
 #include <QMimeData>
 #include <QResource>
 #include <QStatusBar>
 
+#ifndef RPFM_NO_KDE
+#include "kicontheme.h"
+#include <breezeicons.h>
+#endif
+
 // Must be called before QApplication is created. Sets up KIconTheme so that the
 // KIconEnginePlugin is discovered and icons are palette-recolored on dark themes.
 extern "C" void init_icon_theme() {
+#ifndef RPFM_NO_KDE
     KIconTheme::initTheme();
+#endif
 }
 
 // Fuction to be able to create a custom QMainWindow.
@@ -21,16 +26,30 @@ extern "C" QMainWindow* new_q_main_window_custom(bool (*are_you_sure) (QMainWind
     return dynamic_cast<QMainWindow*>(new QMainWindowCustom(nullptr, are_you_sure, is_dark_theme_enabled));
 }
 
+extern "C" void flush_pending_open_packs(QMainWindow* main_window) {
+    if (auto customWindow = dynamic_cast<QMainWindowCustom*>(main_window)) {
+        customWindow->flushPendingOpenPacks();
+    }
+}
+
 QMainWindowCustom::QMainWindowCustom(QWidget *parent, bool (*are_you_sure_fn) (QMainWindow* main_window, bool is_delete_my_mod, bool is_full_close), bool is_dark_theme_enabled) : QMainWindow(parent) {
     are_you_sure = are_you_sure_fn;
     dark_theme_enabled = is_dark_theme_enabled;
 
+#ifdef RPFM_NO_KDE
+    busyIndicator = new QProgressBar();
+    busyIndicator->setRange(0, 0);
+    busyIndicator->setTextVisible(false);
+    busyIndicator->setFixedSize(48, 14);
+#else
     busyIndicator = new KBusyIndicatorWidget();
     busyIndicator->setFixedSize(16, 16);
+#endif
     statusBar()->addPermanentWidget(busyIndicator);
     busyIndicator->hide();
 
     setAcceptDrops(true);
+    qApp->installEventFilter(this);
 
     #ifdef _WIN32
 
@@ -41,6 +60,28 @@ QMainWindowCustom::QMainWindowCustom(QWidget *parent, bool (*are_you_sure_fn) (Q
         BreezeIcons::initIcons();
         QIcon::setThemeName(QStringLiteral("breeze"));
     #endif
+}
+
+void QMainWindowCustom::emitOrQueueOpenPack(QStringList const &paths) {
+    if (paths.isEmpty()) {
+        return;
+    }
+
+    if (receivers(SIGNAL(openPack(QStringList const &))) > 0) {
+        emit openPack(paths);
+    } else {
+        pendingOpenPacks.append(paths);
+    }
+}
+
+void QMainWindowCustom::flushPendingOpenPacks() {
+    if (pendingOpenPacks.isEmpty()) {
+        return;
+    }
+
+    QStringList paths;
+    paths.swap(pendingOpenPacks);
+    emit openPack(paths);
 }
 
 // Overload of the close event so we can put a dialog there.
@@ -69,6 +110,24 @@ void QMainWindowCustom::changeEvent(QEvent* event) {
     QMainWindow::changeEvent(event);
 }
 
+bool QMainWindowCustom::eventFilter(QObject *watched, QEvent *event) {
+    if (event->type() == QEvent::FileOpen) {
+        auto fileOpenEvent = static_cast<QFileOpenEvent*>(event);
+        QString filePath = fileOpenEvent->file();
+
+        if (filePath.isEmpty()) {
+            filePath = fileOpenEvent->url().toLocalFile();
+        }
+
+        if (!filePath.isEmpty()) {
+            emitOrQueueOpenPack(QStringList{filePath});
+            return true;
+        }
+    }
+
+    return QMainWindow::eventFilter(watched, event);
+}
+
 void QMainWindowCustom::dragEnterEvent(QDragEnterEvent *event) {
     event->accept();
 }
@@ -92,6 +151,6 @@ void QMainWindowCustom::dropEvent(QDropEvent *event) {
             pathList.append(urlList.at(i).toLocalFile());
         }
 
-        emit openPack(pathList);
+        emitOrQueueOpenPack(pathList);
     }
 }

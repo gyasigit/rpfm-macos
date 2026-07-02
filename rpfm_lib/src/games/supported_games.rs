@@ -687,6 +687,19 @@ impl Default for SupportedGames {
                     config_folder: None,
                 });
 
+                data.insert(InstallType::MacSteam, InstallData {
+                    vanilla_packs: vec![],
+                    use_manifest: true,
+                    store_id: 1_142_710,
+                    store_id_ak: 1_880_380,
+                    executable: "Total War WARHAMMER III.app".to_owned(),
+                    data_path: "TotalWarhammer3Data/data".to_owned(),
+                    language_path: "TotalWarhammer3Data/data/localisation".to_owned(),
+                    local_mods_path: "TotalWarhammer3Data/data".to_owned(),
+                    downloaded_mods_path: "./../../workshop/content/1142710".to_owned(),
+                    config_folder: Some("Warhammer3".to_owned()),
+                });
+
                 data
             },
             tool_vars: {

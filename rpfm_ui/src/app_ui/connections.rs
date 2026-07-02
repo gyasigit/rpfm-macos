@@ -16,7 +16,7 @@ This module is, and should stay, private, as it's only glue between the `AppUI` 
 
 use std::rc::Rc;
 
-use crate::ffi::{main_window_drop_pack_signal, main_window_theme_changed_signal};
+use crate::ffi::{flush_pending_open_packs_safe, main_window_drop_pack_signal, main_window_theme_changed_signal};
 use super::{AppUI, slots::AppUISlots};
 
 /// This function connects all the actions from the provided `AppUI` with their slots in `AppUISlots`.
@@ -146,6 +146,7 @@ pub unsafe fn set_connections(app_ui: &Rc<AppUI>, slots: &AppUISlots) {
 
     main_window_drop_pack_signal(app_ui.main_window.static_upcast()).connect(&slots.open_pack_drop);
     main_window_theme_changed_signal(app_ui.main_window.static_upcast()).connect(&slots.theme_changed);
+    flush_pending_open_packs_safe(&app_ui.main_window);
 
     //-----------------------------------------------//
     // `Welcome` widget connections.

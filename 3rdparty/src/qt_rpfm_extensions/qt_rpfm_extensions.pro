@@ -6,17 +6,19 @@
 
 QT       += widgets
 
-# KF6 frameworks (no longer have qmake integration, use include/lib paths directly).
-# We add each KF6 module subdir so transitive includes (e.g. KTextEditor -> KParts -> KCoreAddons) resolve.
-KF6_MODULES = BreezeIcons KIconThemes KTextEditor KWidgetsAddons KCompletion KXmlGui \
-              KParts KCoreAddons KSyntaxHighlighting KConfig KConfigCore KConfigGui \
-              KConfigWidgets KColorScheme KCodecs KI18n
-windows {
-    for(mod, KF6_MODULES): INCLUDEPATH += C:/CraftRoot/include/KF6/$$mod
-} else {
-    for(mod, KF6_MODULES): INCLUDEPATH += /usr/include/KF6/$$mod
+!contains(DEFINES, RPFM_NO_KDE) {
+    # KF6 frameworks (no longer have qmake integration, use include/lib paths directly).
+    # We add each KF6 module subdir so transitive includes (e.g. KTextEditor -> KParts -> KCoreAddons) resolve.
+    KF6_MODULES = BreezeIcons KIconThemes KTextEditor KWidgetsAddons KCompletion KXmlGui \
+                  KParts KCoreAddons KSyntaxHighlighting KConfig KConfigCore KConfigGui \
+                  KConfigWidgets KColorScheme KCodecs KI18n
+    windows {
+        for(mod, KF6_MODULES): INCLUDEPATH += C:/CraftRoot/include/KF6/$$mod
+    } else {
+        for(mod, KF6_MODULES): INCLUDEPATH += /usr/include/KF6/$$mod
+    }
+    LIBS += -lKF6BreezeIcons -lKF6Completion -lKF6IconThemes -lKF6TextEditor -lKF6XmlGui -lKF6WidgetsAddons
 }
-LIBS += -lKF6BreezeIcons -lKF6Completion -lKF6IconThemes -lKF6TextEditor -lKF6XmlGui -lKF6WidgetsAddons
 
 TARGET = qt_rpfm_extensions
 TEMPLATE = lib
@@ -122,11 +124,13 @@ debug:UI_DIR = debug/.ui
 windows {
     INCLUDEPATH += C:/CraftRoot/include
 
-    # Fix for the broken KSyntaxHighlighting include on linux, by AaronBPaden.
-    INCLUDEPATH += C:/CraftRoot/include/KF6/KSyntaxHighlighting
+    !contains(DEFINES, RPFM_NO_KDE) {
+        # Fix for the broken KSyntaxHighlighting include on linux, by AaronBPaden.
+        INCLUDEPATH += C:/CraftRoot/include/KF6/KSyntaxHighlighting
 
-    # Same fix for the build machine.
-    INCLUDEPATH += D:/Craft/include/KF6/KSyntaxHighlighting
+        # Same fix for the build machine.
+        INCLUDEPATH += D:/Craft/include/KF6/KSyntaxHighlighting
+    }
 }
 
 unix {
@@ -134,11 +138,15 @@ unix {
     # Make sure clang is used for compilation. Otherwise RPFM will fail to link.
     QMAKE_CC = clang
 
-    # For some reason, these flags fuck up compilation on windows, so we leave them linux only.
-    QMAKE_CXXFLAGS = -Wl,-rpath='${ORIGIN}'
+    !macx {
+        # For some reason, these flags fuck up compilation on windows, so we leave them linux only.
+        QMAKE_CXXFLAGS = -Wl,-rpath='${ORIGIN}'
+    }
 
-    # Fix for the broken KSyntaxHighlighting include on linux, by AaronBPaden.
-    INCLUDEPATH += /usr/include/KF6/KSyntaxHighlighting
+    !contains(DEFINES, RPFM_NO_KDE) {
+        # Fix for the broken KSyntaxHighlighting include on linux, by AaronBPaden.
+        INCLUDEPATH += /usr/include/KF6/KSyntaxHighlighting
+    }
 }
 
 # This means we generate all the artifacts in target and drop the final lib in libs.

@@ -21,7 +21,7 @@
 * ***Linux***:
     - ***Arch Linux and derivatives***: it's in the AUR as **rpfm-bin**.
     - ***Other distros***: install Qt6, xz and 7zip — or use the Flatpak.
-* ***macOS***: you'll know it when I manage to compile it for Mac.
+* ***macOS***: experimental builds are supported through `install/macos/build_macos.sh`. See [`install/macos/README.md`](./install/macos/README.md).
 
 ## Requirements (to build)
 

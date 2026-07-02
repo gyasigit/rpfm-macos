@@ -1,5 +1,99 @@
 #include "text_editor.h"
 
+#ifdef RPFM_NO_KDE
+#include <QTextBlock>
+#include <QTextCursor>
+
+static QPlainTextEdit* plain_text_editor(QWidget* view) {
+    return dynamic_cast<QPlainTextEdit*>(view);
+}
+
+static QTextCursor cursor_for_position(QPlainTextEdit* editor, int row, int column) {
+    QTextBlock block = editor->document()->findBlockByNumber(row);
+    QTextCursor cursor(block.isValid() ? block : editor->document()->lastBlock());
+    cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, column);
+    return cursor;
+}
+
+// Function to create the filter in a way that we don't need to bother Rust with new types.
+extern "C" QWidget* new_text_editor(QWidget* parent) {
+    QPlainTextEdit* editor = new QPlainTextEdit(parent);
+    editor->setLineWrapMode(QPlainTextEdit::NoWrap);
+
+    QLineEdit* dummy = new QLineEdit(editor);
+    dummy->setObjectName("Dummy");
+    dummy->setVisible(false);
+
+    QObject::connect(editor, &QPlainTextEdit::textChanged, dummy, [dummy] {
+        dummy->setText(QString::number(dummy->text().toInt() + 1));
+    });
+
+    return editor;
+}
+
+// Function to return the current text of the Text Editor.
+extern "C" QString* get_text(QWidget* view) {
+    QPlainTextEdit* editor = plain_text_editor(view);
+    return new QString(editor != nullptr ? editor->toPlainText() : QString());
+}
+
+// Function to set the current text of the text editor.
+extern "C" void set_text(QWidget* view, QString* text, QString* highlighting_mode) {
+    Q_UNUSED(highlighting_mode);
+
+    QPlainTextEdit* editor = plain_text_editor(view);
+    if (editor == nullptr) {
+        return;
+    }
+
+    editor->setPlainText(*text);
+    editor->document()->setModified(false);
+    editor->moveCursor(QTextCursor::Start);
+}
+
+// Function to trigger the config dialog of the text editor.
+extern "C" void open_text_editor_config(QWidget* parent) {
+    Q_UNUSED(parent);
+}
+
+// Function to return the dummy widget of the Text Editor, for notifications.
+extern "C" QLineEdit* get_text_changed_dummy_widget(QWidget* view) {
+    QPlainTextEdit* editor = plain_text_editor(view);
+    return editor != nullptr ? editor->findChild<QLineEdit*>("Dummy") : nullptr;
+}
+
+// Function to scroll to a specific row in a text file.
+extern "C" void scroll_to_row(QWidget* view, int row_number) {
+    QPlainTextEdit* editor = plain_text_editor(view);
+    if (editor == nullptr) {
+        return;
+    }
+
+    QTextCursor cursor = cursor_for_position(editor, row_number, 0);
+    editor->setTextCursor(cursor);
+    editor->centerCursor();
+}
+
+// Function to get the current row of the cursor in a text file.
+extern "C" int cursor_row(QWidget* view) {
+    QPlainTextEdit* editor = plain_text_editor(view);
+    return editor != nullptr ? editor->textCursor().blockNumber() : 0;
+}
+
+// Function to scroll to a specific position, and select a range.
+extern "C" void scroll_to_pos_and_select(QWidget* view, int start_row, int start_column, int end_row, int end_column) {
+    QPlainTextEdit* editor = plain_text_editor(view);
+    if (editor == nullptr) {
+        return;
+    }
+
+    QTextCursor cursor = cursor_for_position(editor, start_row, start_column);
+    QTextCursor end_cursor = cursor_for_position(editor, end_row, end_column);
+    cursor.setPosition(end_cursor.position(), QTextCursor::KeepAnchor);
+    editor->setTextCursor(cursor);
+    editor->centerCursor();
+}
+#else
 // Function to create the filter in a way that we don't need to bother Rust with new types.
 extern "C" QWidget* new_text_editor(QWidget* parent) {
     KTextEditor::Editor *editor = KTextEditor::Editor::instance();
@@ -102,3 +196,4 @@ extern "C" void scroll_to_pos_and_select(QWidget* view, int start_row, int start
     doc_view->setCursorPosition(*start_cursor);
     doc_view->setScrollPosition(*start_cursor);
 }
+#endif

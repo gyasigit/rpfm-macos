@@ -27,7 +27,7 @@
 //!
 //! - [`GameInfo`]: Complete game configuration including paths, versions, and features
 //! - [`SupportedGames`]: Registry of all games supported by RPFM
-//! - [`InstallType`]: Platform and store variant (Steam/Epic/Wargaming, Windows/Linux)
+//! - [`InstallType`]: Platform and store variant (Steam/Epic/Wargaming, Windows/Linux/macOS)
 //! - [`InstallData`]: Installation-specific paths and identifiers
 //! - [`Manifest`]: Game manifest file parser for vanilla PackFile lists
 //! - [`PFHFileType`]: Type of PackFile (Boot, Release, Patch, Mod, Movie)
@@ -86,6 +86,7 @@
 //! match install_type {
 //!     InstallType::WinSteam => println!("Windows Steam version"),
 //!     InstallType::LnxSteam => println!("Linux Steam version"),
+//!     InstallType::MacSteam => println!("macOS Steam version"),
 //!     InstallType::WinEpic => println!("Windows Epic version"),
 //!     InstallType::WinWargaming => println!("Windows Wargaming version"),
 //! }
@@ -362,6 +363,11 @@ pub enum InstallType {
     /// Identified by Linux executable names.
     LnxSteam,
 
+    /// macOS installation from Steam.
+    ///
+    /// Identified by macOS app bundles or executable paths.
+    MacSteam,
+
     /// Windows installation from Epic Games Store.
     ///
     /// Identified by presence of `EOSSDK-Win64-Shipping.dll`.
@@ -456,6 +462,7 @@ impl Display for InstallType {
         Display::fmt(match self {
             Self::WinSteam => "Windows - Steam",
             Self::LnxSteam => "Linux - Steam",
+            Self::MacSteam => "macOS - Steam",
             Self::WinEpic => "Windows - Epic",
             Self::WinWargaming => "Windows - Wargaming",
         }, f)
@@ -535,12 +542,13 @@ impl GameInfo {
     ///
     /// # Detection Strategy
     ///
-    /// 1. Checks for platform-specific executable names
+    /// 1. Checks for platform-specific executable names or app bundles
     /// 2. For Windows installations with multiple possible types:
     ///    - Looks for `steam_api.dll` or `steam_api64.dll` for Steam
     ///    - Looks for `EOSSDK-Win64-Shipping.dll` for Epic Games Store
     ///    - Falls back to Wargaming/Netease if neither found
     /// 3. Assumes Linux Steam for Linux installations
+    /// 4. Assumes macOS Steam for macOS installations
     ///
     /// # Arguments
     ///
@@ -580,14 +588,14 @@ impl GameInfo {
         // Checks to guess what kind of installation we have.
         let base_path_files = files_from_subdir(game_path, false)?;
         let install_type_by_exe = self.install_data.iter().filter_map(|(install_type, install_data)|
-            if base_path_files.iter().filter_map(|path| if path.is_file() { path.file_name() } else { None }).any(|filename| filename.to_ascii_lowercase() == *install_data.executable().to_lowercase()) {
+            if self.install_marker_exists(game_path, &base_path_files, install_data) {
                 Some(install_type)
             } else { None }
         ).collect::<Vec<&InstallType>>();
 
-        // If no compatible install data was found, use the first one we have.
+        // If no compatible install data was found, use the current platform's default.
         if install_type_by_exe.is_empty() {
-            let install_type = self.install_data.keys().next().unwrap();
+            let install_type = self.default_install_type_for_current_platform();
             self.install_type_cache.write().unwrap().insert(game_path.to_path_buf(), install_type.clone());
             Ok(install_type.clone())
         }
@@ -601,8 +609,8 @@ impl GameInfo {
         // If we have multiple install data compatible, it gets more complex.
         else {
 
-            // First, identify if we have a windows or linux build (mac only exists in your dreams.....).
-            // Can't be both because they have different exe names. Unless you're retarded and you merge both, in which case, fuck you.
+            // First, identify if we have a Windows, Linux or macOS build.
+            // They normally have different executable names, so ambiguity is rare.
             let is_windows = install_type_by_exe.iter().any(|install_type| install_type == &&InstallType::WinSteam || install_type == &&InstallType::WinEpic || install_type == &&InstallType::WinWargaming);
             if is_windows {
 
@@ -627,12 +635,49 @@ impl GameInfo {
                 }
             }
 
+            else if install_type_by_exe.contains(&&InstallType::MacSteam) {
+                self.install_type_cache.write().unwrap().insert(game_path.to_path_buf(), InstallType::MacSteam);
+                Ok(InstallType::MacSteam)
+            }
+
             // Otherwise, assume it's linux
             else {
                 self.install_type_cache.write().unwrap().insert(game_path.to_path_buf(), InstallType::LnxSteam);
                 Ok(InstallType::LnxSteam)
             }
         }
+    }
+
+    /// Checks whether an install entry matches files present in the game root.
+    ///
+    /// Windows/Linux entries usually use an executable in the root folder. macOS entries
+    /// can use `.app` bundles, which are directories, or nested paths inside a bundle.
+    fn install_marker_exists(&self, game_path: &Path, base_path_files: &[PathBuf], install_data: &InstallData) -> bool {
+        let executable = install_data.executable();
+        if game_path.join(executable).exists() {
+            return true;
+        }
+
+        base_path_files.iter()
+            .filter_map(|path| path.file_name())
+            .any(|filename| filename.to_string_lossy().eq_ignore_ascii_case(executable))
+    }
+
+    /// Returns the preferred install type for the OS running RPFM.
+    fn default_install_type_for_current_platform(&self) -> InstallType {
+        let preferred = if cfg!(target_os = "macos") {
+            [InstallType::MacSteam, InstallType::LnxSteam, InstallType::WinSteam, InstallType::WinEpic, InstallType::WinWargaming]
+        } else if cfg!(target_os = "linux") {
+            [InstallType::LnxSteam, InstallType::WinSteam, InstallType::MacSteam, InstallType::WinEpic, InstallType::WinWargaming]
+        } else {
+            [InstallType::WinSteam, InstallType::WinEpic, InstallType::WinWargaming, InstallType::LnxSteam, InstallType::MacSteam]
+        };
+
+        preferred.iter()
+            .find(|install_type| self.install_data.contains_key(*install_type))
+            .cloned()
+            .or_else(|| self.install_data.keys().next().cloned())
+            .unwrap()
     }
 
     /// Returns the installation-specific data for a game.
@@ -1028,7 +1073,8 @@ impl GameInfo {
         let install_type = self.install_type(game_path)?;
         let install_data = match install_type {
             InstallType::WinSteam |
-            InstallType::LnxSteam => self.install_data.get(&install_type).ok_or_else(|| RLibError::GameInstallTypeNotSupported(self.display_name.to_string(), install_type.to_string()))?,
+            InstallType::LnxSteam |
+            InstallType::MacSteam => self.install_data.get(&install_type).ok_or_else(|| RLibError::GameInstallTypeNotSupported(self.display_name.to_string(), install_type.to_string()))?,
             _ => return Err(RLibError::ReservedFiles)
         };
 
@@ -1212,6 +1258,7 @@ impl GameInfo {
 
         match install_type {
             InstallType::LnxSteam |
+            InstallType::MacSteam |
             InstallType::WinSteam => {
                 let store_id = self.install_data.get(&install_type).ok_or_else(|| RLibError::GameInstallTypeNotSupported(self.display_name.to_string(), install_type.to_string()))?.store_id();
                 Ok(format!("steam://rungameid/{store_id}"))
@@ -1753,5 +1800,32 @@ impl GameInfo {
         }
 
         Err(RLibError::SteamIDDoesntBelongToKnownGame(steam_id))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs::{create_dir_all, write};
+
+    use super::*;
+
+    #[test]
+    fn detects_warhammer_3_macos_steam_layout() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let game_path = temp_dir.path();
+
+        create_dir_all(game_path.join("Total War WARHAMMER III.app/Contents/MacOS")).unwrap();
+        create_dir_all(game_path.join("TotalWarhammer3Data/data/localisation/en")).unwrap();
+        write(game_path.join("TotalWarhammer3Data/data/manifest.txt"), "").unwrap();
+
+        let games = SupportedGames::default();
+        let game = games.game(KEY_WARHAMMER_3).unwrap();
+
+        assert_eq!(game.install_type(game_path).unwrap(), InstallType::MacSteam);
+        assert_eq!(game.data_path(game_path).unwrap(), game_path.join("TotalWarhammer3Data/data"));
+        assert_eq!(game.language_path(game_path).unwrap(), game_path.join("TotalWarhammer3Data/data/localisation/en"));
+        assert_eq!(game.local_mods_path(game_path).unwrap(), game_path.join("TotalWarhammer3Data/data"));
+        assert_eq!(game.steam_id(game_path).unwrap(), 1_142_710);
+        assert_eq!(game.game_launch_command(game_path).unwrap(), "steam://rungameid/1142710");
     }
 }

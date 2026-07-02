@@ -16,6 +16,7 @@ Here it goes all linking/cross-language compilation/platform-specific stuff that
 
 #[cfg(target_os = "windows")]#[cfg(feature = "support_model_renderer")] use std::fs::copy;
 use std::io::{stderr, stdout, Write};
+use std::path::Path;
 use std::process::{Command, exit};
 
 /// Windows Build Script.
@@ -110,6 +111,7 @@ fn main() {
                     exit(98)
                 }
             }
+            fail_if_command_failed(output.status.code(), 98);
         }
         Err(error) => {
             stdout().write_all(error.to_string().as_bytes()).unwrap();
@@ -143,6 +145,7 @@ fn main() {
                     exit(98)
                 }
             }
+            fail_if_command_failed(output.status.code(), 98);
         }
         Err(error) => {
             stdout().write_all(error.to_string().as_bytes()).unwrap();
@@ -158,7 +161,7 @@ fn main() {
     common_config();
 
     // This compiles the custom widgets lib.
-    match Command::new("gmake").current_dir("./../3rdparty/src/qt_rpfm_extensions/").output() {
+    match Command::new(macos_make_command()).current_dir("./../3rdparty/src/qt_rpfm_extensions/").output() {
         Ok(output) => {
             stdout().write_all(&output.stdout).unwrap();
             stderr().write_all(&output.stderr).unwrap();
@@ -169,10 +172,11 @@ fn main() {
                     exit(98)
                 }
             }
+            fail_if_command_failed(output.status.code(), 98);
         }
         Err(error) => {
             stdout().write_all(error.to_string().as_bytes()).unwrap();
-            stdout().write_all(b"ERROR: You either don't have gmake installed, it's not in the path, or there was an error while executing it. Fix that before continuing.").unwrap();
+            stdout().write_all(b"ERROR: You either don't have GNU Make installed, it's not in the path, or there was an error while executing it. Install it with `brew install make`, set GMAKE to its path if needed, and try again.").unwrap();
             exit(99);
         }
     }
@@ -184,17 +188,20 @@ fn common_config() {
     // This is to make RPFM able to see the extra libs we need while building.
     println!("cargo:rustc-link-search=native=./3rdparty/builds");
     println!("cargo:rustc-link-lib=static=qt_rpfm_extensions");
-    println!("cargo:rustc-link-lib=dylib=KF6BreezeIcons");
-    println!("cargo:rustc-link-lib=dylib=KF6Completion");
-    println!("cargo:rustc-link-lib=dylib=KF6IconThemes");
-    println!("cargo:rustc-link-lib=dylib=KF6TextEditor");
-    println!("cargo:rustc-link-lib=dylib=KF6XmlGui");
-    println!("cargo:rustc-link-lib=dylib=KF6WidgetsAddons");
+    if !no_kde_build() {
+        println!("cargo:rustc-link-lib=dylib=KF6BreezeIcons");
+        println!("cargo:rustc-link-lib=dylib=KF6Completion");
+        println!("cargo:rustc-link-lib=dylib=KF6IconThemes");
+        println!("cargo:rustc-link-lib=dylib=KF6TextEditor");
+        println!("cargo:rustc-link-lib=dylib=KF6XmlGui");
+        println!("cargo:rustc-link-lib=dylib=KF6WidgetsAddons");
+    }
 
     // Force cargo to rerun this script if any of these files is changed.
     println!("cargo:rerun-if-changed=./3rdparty/builds/*");
     println!("cargo:rerun-if-changed=./3rdparty/src/qt_rpfm_extensions/*");
     println!("cargo:rerun-if-changed=./rpfm_ui/build.rs");
+    println!("cargo:rerun-if-env-changed=RPFM_NO_KDE");
 
     // Properly rebuild if the PostHog API key or Sentry DSN env vars change.
     for var in ["RPFM_UI_SENTRY_DSN", "RPFM_UI_POSTHOG_API_KEY"] {
@@ -205,11 +212,14 @@ fn common_config() {
     }
 
     // This creates the makefile for the custom widget lib.
-    let mut qmake = Command::new("qmake6");
+    let mut qmake = qmake6_command();
     if cfg!(debug_assertions) {
         qmake.arg("CONFIG+=debug");
     } else {
         qmake.arg("CONFIG+=release");
+    }
+    if no_kde_build() {
+        qmake.arg("DEFINES+=RPFM_NO_KDE");
     }
 
     match qmake
@@ -230,11 +240,58 @@ fn common_config() {
                     exit(98)
                 }
             }
+            fail_if_command_failed(output.status.code(), 99);
         }
         Err(error) => {
             stdout().write_all(error.to_string().as_bytes()).unwrap();
             stdout().write_all(b"ERROR: You either don't have qmake installed, it's not in the path, or there was an error while executing it. Fix that before continuing.").unwrap();
             exit(99);
         }
+    }
+}
+
+/// Returns a qmake command, preferring explicit environment configuration before
+/// checking common Homebrew install locations for Qt 6.
+fn qmake6_command() -> Command {
+    for var in ["QMAKE6", "QMAKE"] {
+        if let Ok(path) = std::env::var(var) {
+            if !path.is_empty() {
+                return Command::new(path);
+            }
+        }
+    }
+
+    for path in [
+        "/opt/homebrew/opt/qt@6/bin/qmake6",
+        "/usr/local/opt/qt@6/bin/qmake6",
+        "/opt/homebrew/bin/qmake6",
+        "/usr/local/bin/qmake6",
+    ] {
+        if Path::new(path).exists() {
+            return Command::new(path);
+        }
+    }
+
+    Command::new("qmake6")
+}
+
+/// Returns the GNU Make command to use on macOS.
+#[cfg(target_os = "macos")]
+fn macos_make_command() -> String {
+    std::env::var("GMAKE")
+        .or_else(|_| std::env::var("MAKE"))
+        .unwrap_or_else(|_| "gmake".to_owned())
+}
+
+fn no_kde_build() -> bool {
+    std::env::var("RPFM_NO_KDE")
+        .map(|value| value != "0" && !value.eq_ignore_ascii_case("false"))
+        .unwrap_or(false)
+}
+
+fn fail_if_command_failed(status_code: Option<i32>, exit_code: i32) {
+    if status_code.unwrap_or(1) != 0 {
+        println!("cargo:warning=Native Qt extension build failed with status {:?}", status_code);
+        exit(exit_code);
     }
 }

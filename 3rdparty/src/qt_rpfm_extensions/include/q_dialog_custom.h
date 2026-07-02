@@ -6,7 +6,9 @@
 #include <QMoveEvent>
 #include <QEvent>
 #include <QMessageBox>
+#ifndef RPFM_NO_KDE
 #include <KBusyIndicatorWidget>
+#endif
 
 extern "C" QDialog* new_q_dialog_custom(QWidget *parent = nullptr, bool (*are_you_sure)(QDialog* dialog) = nullptr);
 

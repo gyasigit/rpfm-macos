@@ -1106,8 +1106,8 @@ unsafe fn new_setting_checkbox(
     let checkbox = QCheckBox::from_q_widget(container);
     setting_row!(vbox, container, label, checkbox);
 
-    // On Linux, program updates are managed by the package manager or Flatpak.
-    if cfg!(target_os = "linux") && settings_key == CHECK_UPDATES_ON_START {
+    // On Linux/macOS, program updates are managed outside RPFM itself.
+    if cfg!(any(target_os = "linux", target_os = "macos")) && settings_key == CHECK_UPDATES_ON_START {
         container.set_visible(false);
     }
 
@@ -1158,8 +1158,8 @@ unsafe fn new_setting_combobox(vbox: &QBox<QVBoxLayout>, container: &QBox<QWidge
     }
     setting_row!(vbox, container, label, combobox);
 
-    // On Linux, program updates are managed by the package manager or Flatpak.
-    if cfg!(target_os = "linux") && key == "settings_update_channel" {
+    // On Linux/macOS, program updates are managed outside RPFM itself.
+    if cfg!(any(target_os = "linux", target_os = "macos")) && key == "settings_update_channel" {
         container.set_visible(false);
     }
 

@@ -2,6 +2,9 @@
 #define TEXT_EDITOR_H
 
 #include "qt_subclasses_global.h"
+#ifdef RPFM_NO_KDE
+#include <QPlainTextEdit>
+#else
 #ifdef _WIN32
 #include <KF6/KTextEditor/KTextEditor/Document>
 #include <KF6/KTextEditor/KTextEditor/Editor>
@@ -11,10 +14,13 @@
 #include <KTextEditor/Editor>
 #include <KTextEditor/View>
 #endif
+#endif
 #include <QLineEdit>
 
 // This one is needed for the save fix.
+#ifndef RPFM_NO_KDE
 #include <KActionCollection>
+#endif
 
 extern "C" QWidget* new_text_editor(QWidget* parent = nullptr);
 
@@ -27,6 +33,8 @@ extern "C" void open_text_editor_config(QWidget* parent);
 extern "C" QLineEdit* get_text_changed_dummy_widget(QWidget* view = nullptr);
 
 extern "C" void scroll_to_row(QWidget* view = nullptr, int row_number = 0);
+
+extern "C" int cursor_row(QWidget* view = nullptr);
 
 extern "C" void scroll_to_pos_and_select(QWidget* view, int start_row = 0, int start_column = 0, int end_row = 0, int end_column = 0);
 #endif // TEXT_EDITOR_H

@@ -8,7 +8,7 @@ You'll need:
 
 - [**Windows SDK**](https://developer.microsoft.com/en-US/windows/downloads/windows-sdk).
 - **Visual Studio Community 2022** with the **MSVC** C++ build tools workload.
-- **Rust 1.81** (or newer) with the MSVC toolchain.
+- **Rust 1.85** (or newer) with the MSVC toolchain.
 - [**Craft**](https://community.kde.org/Craft) from KDE.
 
 Once Craft is installed, install RPFM's KDE / Qt dependencies:
@@ -66,7 +66,7 @@ You can make any editor inherit Craft's environment (and so be able to compile R
 You'll need:
 
 - **CMake**.
-- **Rust 1.81** (or newer).
+- **Rust 1.85** (or newer).
 - **Qt6**.
 - **KDE Frameworks 6**: KCompletion, KIconThemes, KTextEditor, KXmlGui, KWidgetsAddons.
 - **xz**, **p7zip**.
@@ -86,7 +86,31 @@ cargo build --release
 
 ## macOS
 
-There's no maintained macOS build. The `qt_*` Qt6 bindings RPFM uses build on macOS in principle, but nobody is currently producing or testing macOS builds. Contributions welcome.
+macOS support is experimental. The `qt_*` Qt6 bindings RPFM uses build on macOS in principle, and the repo includes a helper script for local builds, but macOS packaging still needs real-world testing, dependency bundling, signing and notarization work.
+
+You'll need:
+
+- **Rust 1.85** (or newer).
+- **CMake**.
+- **pkg-config**.
+- **GNU Make**.
+- **Qt 6**.
+
+With Homebrew:
+
+```bash
+brew install rust cmake pkg-config make qt@6
+```
+
+Then from the repo root:
+
+```bash
+./install/macos/build_macos.sh
+```
+
+The script builds `rpfm_server` and `rpfm_ui`, then creates `target/macos/RPFM.app`. See `install/macos/README.md` for the current packaging caveats.
+
+The default macOS build sets `RPFM_NO_KDE=1` and uses Qt-only fallbacks for the KDE widgets that are difficult to source from Homebrew. A full KDE Frameworks 6 build can still be attempted by setting `RPFM_NO_KDE=0`, but it requires locally available KF6 headers, libraries and designer plugins.
 
 ## Feature flags
 

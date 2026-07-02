@@ -256,6 +256,11 @@ pub fn new_q_main_window_custom_safe(are_you_sure: extern "C" fn(*mut QMainWindo
     unsafe { QBox::from_raw(new_q_main_window_custom(are_you_sure, is_dark_theme_enabled)) }
 }
 
+extern "C" { fn flush_pending_open_packs(main_window: *mut QMainWindow); }
+pub fn flush_pending_open_packs_safe(main_window: &QBox<QMainWindow>) {
+    unsafe { flush_pending_open_packs(main_window.as_mut_raw_ptr()) }
+}
+
 pub fn main_window_drop_pack_signal(widget: QPtr<QWidget>) -> Signal<(*const ::qt_core::QListOfQString,)> {
     unsafe {
         Signal::new(

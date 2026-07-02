@@ -87,7 +87,7 @@ impl UpdaterUI {
         let mut receiver_lua_autogen_updates = None;
         let mut receiver_old_ak_updates = None;
 
-        if !cfg!(target_os = "linux") && settings_bool(CHECK_UPDATES_ON_START) {
+        if !cfg!(any(target_os = "linux", target_os = "macos")) && settings_bool(CHECK_UPDATES_ON_START) {
             receiver_updates = Some(CENTRAL_COMMAND.read().unwrap().send(Command::CheckUpdates));
         }
 
@@ -252,8 +252,8 @@ impl UpdaterUI {
         update_twautogen_button.set_enabled(false);
         update_old_ak_button.set_enabled(false);
 
-        // On Linux, program updates are managed by the package manager or Flatpak.
-        if cfg!(target_os = "linux") {
+        // On Linux/macOS, program updates are managed outside RPFM itself.
+        if cfg!(any(target_os = "linux", target_os = "macos")) {
             update_program_label.set_visible(false);
             update_program_button.set_visible(false);
         }
@@ -262,7 +262,7 @@ impl UpdaterUI {
         main_widget.static_downcast::<QDialog>().set_window_title(&qtr("updater_title"));
         main_widget.static_downcast::<QDialog>().show();
 
-        let receiver_program = if !cfg!(target_os = "linux") {
+        let receiver_program = if !cfg!(any(target_os = "linux", target_os = "macos")) {
             Some(CENTRAL_COMMAND.read().unwrap().send(Command::CheckUpdates))
         } else {
             None
@@ -272,7 +272,7 @@ impl UpdaterUI {
         let receiver_old_ak = CENTRAL_COMMAND.read().unwrap().send(Command::CheckEmpireAndNapoleonAKUpdates);
 
         // Apply prechecks immediately for any that were already resolved.
-        let mut pending_program = if cfg!(target_os = "linux") {
+        let mut pending_program = if cfg!(any(target_os = "linux", target_os = "macos")) {
             false
         } else {
             match precheck_program {
