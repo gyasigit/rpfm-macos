@@ -34,6 +34,23 @@ The script runs `cargo build --release --bin rpfm_server --bin rpfm_ui`, compile
 target/macos/RPFM.app
 ```
 
+## Using RPFM with WH3MM on macOS
+
+This app opens and edits `.pack` files. It does not manage WARHAMMER III mod load order or launch the game. For that part of the workflow, use the WH3MM macOS fork:
+
+```text
+https://github.com/gyasigit/WH3-Mod-Manager-macos/tree/macos-compat
+```
+
+After building `RPFM.app`, associate `.pack` files with it:
+
+1. In Finder, select any `.pack` file.
+2. Choose File > Get Info.
+3. Under Open With, choose `RPFM.app`.
+4. Use Change All if you want every `.pack` file to open with RPFM.
+
+Once associated, WH3MM's "Open in RPFM" action can hand `.pack` files to this app through macOS.
+
 You can still build manually:
 
 ```bash

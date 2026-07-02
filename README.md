@@ -15,6 +15,23 @@
 
 [![become_a_patron_button](https://user-images.githubusercontent.com/15714929/40394531-2130b9ce-5e24-11e8-91a2-bbf8e6e75d21.png)][Patreon]
 
+## macOS fork notes
+
+This fork adds experimental macOS build support for RPFM. Use it when you want to open, inspect or edit Total War `.pack` files on macOS.
+
+For WARHAMMER III mod load order, enabling/disabling mods and launching the Steam/Feral game with a managed mod list, use the companion WH3MM macOS fork:
+
+- WH3MM macOS fork: https://github.com/gyasigit/WH3-Mod-Manager-macos/tree/macos-compat
+
+Typical macOS workflow:
+
+1. Build or download `RPFM.app` from this fork.
+2. Associate `.pack` files with `RPFM.app` in Finder through Open With.
+3. Use RPFM to inspect or edit packs.
+4. Use WH3MM to enable, sort and launch mods in Total War: WARHAMMER III.
+
+RPFM and WH3MM are complementary: RPFM is the pack-file editor, while WH3MM is the mod manager/launcher.
+
 ## Requirements (to use)
 
 * ***Windows***: just download, extract and run.
