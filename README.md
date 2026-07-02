@@ -37,6 +37,12 @@ Typical macOS workflow:
 
 RPFM and WH3MM are complementary: RPFM is the pack-file editor, while WH3MM is the mod manager/launcher.
 
+### Distribution TODO
+
+- Add Developer ID signing and Apple notarization for published macOS builds.
+- Verify the Qt-only build script on Unix-like build hosts, especially macOS arm64/x64 and Linux.
+- Add CI or a documented release checklist that confirms `RPFM.app` opens directly and via Finder's Open With flow for `.pack` files.
+
 ## Requirements (to use)
 
 * ***Windows***: just download, extract and run.

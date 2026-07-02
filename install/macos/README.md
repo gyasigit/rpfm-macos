@@ -89,4 +89,7 @@ RPFM has a macOS Steam install type for Total War: WARHAMMER III. It detects the
 - Qt dependencies should be bundled using `macdeployqt6` or `macdeployqt`; the script calls either tool when available.
 - The Qt-only build disables KDE's shortcut editor and uses `QPlainTextEdit` instead of KTextEditor, so syntax highlighting/editor preferences are reduced compared with Linux/Windows.
 - Code signing and notarization are required for distribution outside the App Store.
-- No CI runner is currently configured for macOS builds
+- TODO: add Developer ID signing and Apple notarization for release artifacts.
+- TODO: verify the build on Unix-like hosts, including macOS arm64/x64 and Linux.
+- TODO: add CI or a release checklist that confirms `RPFM.app` launches, opens `.pack` files from Finder, and keeps `.pack` document associations.
+- No CI runner is currently configured for macOS builds.
