@@ -3,13 +3,15 @@
 
 [![Tests](https://github.com/Frodo45127/rpfm/actions/workflows/test.yml/badge.svg)](https://github.com/Frodo45127/rpfm/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/Frodo45127/rpfm)](https://github.com/Frodo45127/rpfm/releases/latest)
+[![Latest upstream release](https://img.shields.io/github/v/release/Frodo45127/rpfm)](https://github.com/Frodo45127/rpfm/releases/latest)
 [![AUR](https://img.shields.io/aur/version/rpfm-bin)](https://aur.archlinux.org/packages/rpfm-bin)
-[![Downloads](https://img.shields.io/github/downloads/Frodo45127/rpfm/total)](https://github.com/Frodo45127/rpfm/releases)
+[![macOS downloads](https://img.shields.io/github/downloads/gyasigit/rpfm-macos/total)](https://github.com/gyasigit/rpfm-macos/releases)
 
 ***Rusted PackFile Manager*** (RPFM) is a Rust + ***Qt6*** reimplementation of ***PackFile Manager*** (PFM), one of the best modding tools for Total War games. It opens, inspects, edits and saves PackFiles for every Total War since *Empire: Total War*, and ships integrated editors for DB tables, Loc files, scripts, animations, portrait settings, rigid models, videos and a long list of other formats.
 
-**Downloads:** [https://github.com/Frodo45127/rpfm/releases][Downloads]
+**macOS downloads:** [https://github.com/gyasigit/rpfm-macos/releases][MacDownloads]
+
+**Official upstream releases:** [https://github.com/Frodo45127/rpfm/releases][UpstreamDownloads]
 
 **Manual (read it before asking!):** [HERE][Manual].
 
@@ -19,9 +21,12 @@
 
 This fork adds experimental macOS build support for RPFM. Use it when you want to open, inspect or edit Total War `.pack` files on macOS.
 
+Download the latest macOS build from [the fork releases page][MacDownloads]. Look for an asset named like `RPFM-macos-arm64-*.zip` or `RPFM-macos-x64-*.zip`.
+
 For WARHAMMER III mod load order, enabling/disabling mods and launching the Steam/Feral game with a managed mod list, use the companion WH3MM macOS fork:
 
 - WH3MM macOS fork: https://github.com/gyasigit/WH3-Mod-Manager-macos/tree/macos-compat
+- WH3MM macOS downloads: https://github.com/gyasigit/WH3-Mod-Manager-macos/releases
 
 Typical macOS workflow:
 
@@ -100,5 +105,6 @@ RPFM is split into several crates so the same code can power the desktop app, a 
 [Rustup download]: https://www.rustup.rs/ "Here you can download it :)"
 [Patreon]: https://www.patreon.com/RPFM
 [Manual]: https://frodo45127.github.io/rpfm/manual/
-[Downloads]: https://github.com/Frodo45127/rpfm/releases
+[MacDownloads]: https://github.com/gyasigit/rpfm-macos/releases
+[UpstreamDownloads]: https://github.com/Frodo45127/rpfm/releases
 [CompInst]: https://frodo45127.github.io/rpfm/manual/building.html

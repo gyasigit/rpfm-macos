@@ -34,6 +34,23 @@ The script runs `cargo build --release --bin rpfm_server --bin rpfm_ui`, compile
 target/macos/RPFM.app
 ```
 
+## Download Releases
+
+End users should download packaged macOS builds from:
+
+```text
+https://github.com/gyasigit/rpfm-macos/releases
+```
+
+Release assets should be named clearly, for example:
+
+```text
+RPFM-macos-arm64-v5.0.5.zip
+RPFM-macos-x64-v5.0.5.zip
+```
+
+Each zip should contain `RPFM.app` and retain the bundled `Contents/Resources/LICENSE` file.
+
 ## Using RPFM with WH3MM on macOS
 
 This app opens and edits `.pack` files. It does not manage WARHAMMER III mod load order or launch the game. For that part of the workflow, use the WH3MM macOS fork:
